@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+ <head>
+   <meta charset="UTF-8" />
+   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+   <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+   <title>Vue Lab</title>
+   <link
+    rel="stylesheet"    href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+    integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T"
+    crossorigin="anonymous"
+   />
+ </head>
+ <body>
+
+    <div class="jumbotron" style="text-align: center;">
+        <h1 class="display-4">
+            JayStops
+        </h1>
+        <p class="lead">
+            KU bus near you
+        </p>
+    </div>
+
+    
+    <div class="container">
+        <div id="app">
+            <div class="center-block">
+                <div class="input-group-prepend" >
+                    <span class="input-group-text" id="basic-addon1">
+                        Number of Stops:
+                    </span>
+            
+                    <form>
+                        <input v-model.number="numStops" type="number" class="form-control" value="10" placeholder="10" aria-describedby="sizing-addon1">
+                    </form>
+                
+                </div>
+
+            
+                <div v-for="stop in filteredStops" :key="stop.id">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ stop.name }}</h5>
+                            <p class="card-text">{{ stop.description }}<br>
+                            Distance: {{ stop.distance }}</p>
+                        </div>
+                    </div>
+                 </div>
+            
+            </div>
+        </div>
+    </div>
+        
+
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" 
+        integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" 
+        crossorigin="anonymous">
+    </script>
+    <script
+        src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"
+        integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1"
+        crossorigin="anonymous"
+    ></script>
+    <script
+        src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"
+        integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
+        crossorigin="anonymous"
+    ></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+
+    <script>
+   
+    let stops = new Vue({
+        el: '#app',
+        data: {
+            stops: [],
+            numStops: 10,
+            userLat: 0,
+            userLon: 0
+        },
+    methods: {
+        updatePosition(position) {
+            this.userLat = position.coords.latitude;
+            this.userLon = position.coords.longitude;
+            console.log(position.coords.latitude);
+            console.log(position.coords.longitude);
+            for(let i = 0; i < this.stops.length; i++) {
+                this.stops[i].distance = this.computeDistance(this.stops[i].lat, this.stops[i].lon)
+            }
+        },
+        // Distance
+        // Referenced from https://www.movable-type.co.uk/scripts/latlong.html
+        computeDistance(lat, lon) {
+            let R = 6371
+            let rUserLat = (this.userLat * Math.PI/180)
+            let rUserLon = (this.userLon * Math.PI/180)
+            let rSLat = (lat * Math.PI/180)
+            let rSLon = (lon * Math.PI/180)
+            let dLat = Math.abs(rUserLat -rSLat)
+            let dLon = Math.abs(rUserLon -rSLon)
+
+            let a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                    Math.cos(rUserLat) * Math.cos(rSLat) *
+                    Math.sin(dLon/2) * Math.sin(dLon/2);
+            let c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            let d = (R * c)/1.60934;
+
+            return (d.toFixed(3));
+        }
+    },
+    computed: {
+        filteredStops: function () {
+            this.stops.sort(function(a,b){
+                return(a.distance - b.distance)
+            })
+            return(this.stops.slice(0,this.numStops))
+        }
+    },
+    mounted: function () {
+            fetch('https://utils.pauliankline.com/stops.json')
+                .then(function(response) {
+                    return response.json();
+                })
+                .then((response) => this.stops=response) 
+            // Geolocation
+            // Referenced from https://developer.mozilla.org/en-US/docs/Web/API/Geolocation_API
+            if ("geolocation" in navigator) {
+                var geo_options = {
+                    enableHighAccuracy: true,
+                    maximumAge        : 30000,
+                };
+                navigator.geolocation.getCurrentPosition(this.updatePosition,function(error) { alert("ERROR" + error.message); }, geo_options );
+                console.log((this.userLat, this.userLon))
+            } else {
+                console.log("Geolocation Failure")
+            }
+        }
+    })
+   </script>
+ </body>
+</html>
